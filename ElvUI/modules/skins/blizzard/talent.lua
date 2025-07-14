@@ -1,6 +1,124 @@
 local E, L, V, P, G = unpack(select(2, ...)); --Inport: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
 local S = E:GetModule('Skins')
 
+-- Keep track of all created buttons
+local specButtons = {}
+
+local function CreateSpecButton(specIndex, parentFrame, yOffset)
+    -- Get specialization info
+    local specID, specName, _, icon = GetSpecializationInfo(specIndex)
+
+    -- If specialization doesn't exist, don't create button
+    if not specID then return end
+
+    -- Create spec switch button
+    local button = CreateFrame("Button", nil, parentFrame)
+    button:SetSize(50, 50)
+    button:SetPoint("TOPLEFT", parentFrame, "TOPRIGHT", 5, yOffset)
+    
+    -- Apply ElvUI styling
+    button:SetTemplate("Default", true)
+    
+    -- Create icon texture
+    local iconTexture = button:CreateTexture(nil, "OVERLAY")
+    iconTexture:SetTexture(icon)
+    iconTexture:SetTexCoord(0.1, 0.9, 0.1, 0.9) -- Trim the icon borders
+    iconTexture:SetInside(button, 2, 2)
+    
+    -- Create a subtle outer glow frame
+    button.outerGlow = CreateFrame("Frame", nil, button)
+    button.outerGlow:SetPoint("TOPLEFT", button, "TOPLEFT", -2, 2)
+    button.outerGlow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 2, -2)
+    button.outerGlow:SetBackdrop({
+        edgeFile = "Interface\\AddOns\\ElvUI\\media\\textures\\glowTex",
+        edgeSize = 3,
+    })
+    button.outerGlow:SetBackdropBorderColor(1, 0.85, 0.1, 0.7) -- Bright gold with reduced opacity
+    button.outerGlow:SetFrameLevel(button:GetFrameLevel() + 1)
+    button.outerGlow:Hide()
+    
+    -- Store spec info for later reference
+    button.specIndex = specIndex
+    button.specName = specName
+    
+    -- Create highlight effect
+    button:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(unpack(E["media"].rgbvaluecolor))
+        
+        -- Show tooltip with spec info
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(self.specName)
+        GameTooltip:AddLine(L["Click to switch to this spec"], 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    
+    button:SetScript("OnLeave", function(self)
+        local currentSpec = GetSpecialization()
+        if currentSpec == self.specIndex then
+            self:SetBackdropBorderColor(1, 0.8, 0, 1) -- Golden border for active spec
+        else
+            self:SetBackdropBorderColor(unpack(E["media"].bordercolor))
+        end
+        GameTooltip:Hide()
+    end)
+
+    -- Add click functionality
+    button:SetScript("OnClick", function(self)
+        SetSpecialization(self.specIndex)
+    end)
+    
+    -- Add to our tracking table
+    table.insert(specButtons, button)
+    
+    return button
+end
+
+local function UpdateSpecButtons()
+    local currentSpec = GetSpecialization()
+    
+    -- Update all buttons
+    for _, button in ipairs(specButtons) do
+        if button.specIndex == currentSpec then
+            -- Subtle golden border for active spec
+            button:SetBackdropBorderColor(1, 0.8, 0, 1) 
+            button.outerGlow:Show()
+        else
+            button:SetBackdropBorderColor(unpack(E["media"].bordercolor))
+            button.outerGlow:Hide()
+        end
+    end
+end
+
+local function AddSpecButtons()
+    -- Get specialization and talent frames
+    local specFrame = PlayerTalentFrameSpecialization
+    local talentsFrame = PlayerTalentFrameTalents
+
+    if not specFrame or not talentsFrame then
+        E:Print(L["Specialization or talents frame not found!"])
+        return
+    end
+
+    -- Clear existing buttons
+    wipe(specButtons)
+
+    -- Create buttons only for available specializations
+    local numSpecs = GetNumSpecializations()
+
+    for i = 1, numSpecs do
+        local yOffset = -((i - 1) * 55)
+
+        -- Buttons for spec frame
+        CreateSpecButton(i, specFrame, yOffset)
+
+        -- Buttons for talents frame
+        CreateSpecButton(i, talentsFrame, yOffset)
+    end
+    
+    -- Initial update
+    UpdateSpecButtons()
+end
+
 local function LoadSkin()
 	if E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.talent ~= true then return end
 	
@@ -291,6 +409,29 @@ local function LoadSkin()
 			child:DisableDrawLayer("OVERLAY")
 		end
 	end
+	
+	-- Add spec switcher buttons when talent UI is loaded
+	AddSpecButtons()
+end
+
+-- Register event handlers for spec switcher
+local f = CreateFrame("Frame")
+f:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+f:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
+f:SetScript("OnEvent", function(self, event)
+    if event == "ACTIVE_TALENT_GROUP_CHANGED" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
+        if PlayerTalentFrame and PlayerTalentFrame:IsShown() then
+            C_Timer.After(0.2, UpdateSpecButtons)
+        end
+    end
+end)
+
+-- Hook PlayerTalentFrame_Update to ensure our highlights stay correct
+if PlayerTalentFrame_Update then
+    hooksecurefunc("PlayerTalentFrame_Update", function()
+        C_Timer.After(0.1, UpdateSpecButtons)
+    end)
 end
 
 S:RegisterSkin("Blizzard_TalentUI", LoadSkin)

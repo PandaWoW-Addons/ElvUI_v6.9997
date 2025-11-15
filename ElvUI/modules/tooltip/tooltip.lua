@@ -593,7 +593,11 @@ function TT:SetUnitAura(tt, unit, index, filter)
 			local name = UnitName(caster)
 			local _, class = UnitClass(caster)
 			local color = RAID_CLASS_COLORS[class]
-			tt:AddDoubleLine(("|cFFCA3C3C%s|r %d"):format(ID, id), format("|c%s%s|r", color.colorStr, name))
+			if color then
+				tt:AddDoubleLine(("|cFFCA3C3C%s|r %d"):format(ID, id), format("|c%s%s|r", color.colorStr, name))
+			else
+				tt:AddDoubleLine(("|cFFCA3C3C%s|r %d"):format(ID, id), format("%s", name))
+			end
 		else
 			tt:AddLine(("|cFFCA3C3C%s|r %d"):format(ID, id))
 		end
@@ -610,7 +614,11 @@ function TT:SetConsolidatedUnitAura(tt, unit, index)
 			local name = UnitName(caster)
 			local _, class = UnitClass(caster)
 			local color = RAID_CLASS_COLORS[class]
-			tt:AddDoubleLine(("|cFFCA3C3C%s|r %d"):format(ID, id), format("|c%s%s|r", color.colorStr, name))
+			if color then
+				tt:AddDoubleLine(("|cFFCA3C3C%s|r %d"):format(ID, id), format("|c%s%s|r", color.colorStr, name))
+			else
+				tt:AddDoubleLine(("|cFFCA3C3C%s|r %d"):format(ID, id), format("%s", name))
+			end
 		else
 			tt:AddLine(("|cFFCA3C3C%s|r %d"):format(ID, id))
 		end

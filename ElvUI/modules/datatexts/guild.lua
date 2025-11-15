@@ -66,7 +66,7 @@ local function BuildGuildTable()
 	for i = 1, totalMembers do
 		name, rank, rankIndex, level, _, zone, note, officernote, connected, memberstatus, class, _, _, isMobile = GetGuildRosterInfo(i)
 
-		statusInfo = isMobile and mobilestatus[memberstatus]() or onlinestatus[memberstatus]()
+		statusInfo = isMobile and (mobilestatus[memberstatus] and mobilestatus[memberstatus]() or '') or (onlinestatus[memberstatus] and onlinestatus[memberstatus]() or '')
 		zone = (isMobile and not connected) and REMOTE_CHAT or zone
 
 		if connected or isMobile then 

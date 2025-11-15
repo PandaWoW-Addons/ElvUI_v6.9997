@@ -90,6 +90,7 @@ V['skins'] = {
 		["encounterjournal"] = true,
 		["voidstorage"] = true,
 		["transmogrify"] = true,
+		["wardrobe"] = true,
 		["stable"] = true,
 		["bgmap"] = true,
 		['mounts'] = true,

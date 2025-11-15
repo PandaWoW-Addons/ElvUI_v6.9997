@@ -11,13 +11,88 @@ local function LoadSkin()
 		if CollectionsJournalCloseButton then
 			S:HandleCloseButton(CollectionsJournalCloseButton)
 		end
+		
+		-- Скрываем портрет/иконку в левом верхнем углу
+		if CollectionsJournalPortrait then
+			CollectionsJournalPortrait:SetAlpha(0)
+			CollectionsJournalPortrait:Hide()
+		end
+		
+		-- Скрываем все возможные варианты портрета
+		local portraitNames = {
+			"CollectionsJournalPortrait",
+			"CollectionsJournalPortraitTexture",
+			"CollectionsJournalIconTexture"
+		}
+		
+		for _, name in pairs(portraitNames) do
+			local portrait = _G[name]
+			if portrait then
+				portrait:SetAlpha(0)
+				portrait:Hide()
+			end
+		end
+		-- Функция обновления всех основных вкладок
+		local function UpdateMainTabBorders()
+			for i = 1, 5 do
+				local tab = _G["CollectionsJournalTab"..i]
+				if tab and tab.backdrop then
+					local isSelected = PanelTemplates_GetSelectedTab(CollectionsJournal) == tab:GetID()
+					if isSelected then
+						tab.backdrop:SetBackdropBorderColor(1, 0.82, 0)
+					else
+						tab.backdrop:SetBackdropBorderColor(unpack(E.media.bordercolor))
+					end
+				end
+			end
+		end
+		
 		-- Вкладки коллекций
 		for i = 1, 5 do
 			local tab = _G["CollectionsJournalTab"..i]
-			if tab then
+			if tab and not tab.elvuiStyled then
+				-- Скрываем иконки на вкладках
+				for j = 1, tab:GetNumRegions() do
+					local region = select(j, tab:GetRegions())
+					if region and region:GetObjectType() == "Texture" then
+						local drawLayer = region:GetDrawLayer()
+						if drawLayer == "ARTWORK" or drawLayer == "OVERLAY" then
+							region:SetAlpha(0)
+							region:Hide()
+						end
+					end
+				end
+				
+				-- Используем стандартную обработку вкладок ElvUI
 				S:HandleTab(tab)
+				
+				-- Настраиваем текст чтобы не обрезался
+				if tab.Text then
+					tab.Text:ClearAllPoints()
+					tab.Text:SetPoint('CENTER', tab, 'CENTER', 0, 2)
+					tab.Text:SetJustifyH('CENTER')
+				end
+				
+				-- Эффект при наведении (если есть backdrop после HandleTab)
+				if tab.backdrop then
+					tab:HookScript('OnEnter', function(self)
+						if not self.backdrop then return end
+						local isSelected = PanelTemplates_GetSelectedTab(CollectionsJournal) == self:GetID()
+						if not isSelected then
+							self.backdrop:SetBackdropBorderColor(1, 0.82, 0)
+						end
+					end)
+					
+					tab:HookScript('OnLeave', UpdateMainTabBorders)
+					tab:HookScript('OnClick', function() E:Delay(0.05, UpdateMainTabBorders) end)
+					tab:HookScript('OnShow', UpdateMainTabBorders)
+				end
+				
+				tab.elvuiStyled = true
 			end
 		end
+		
+		UpdateMainTabBorders()
 	end
 
 	-- global
@@ -233,6 +308,446 @@ local function LoadSkin()
 	PetJournalPetCardXPBar:StripTextures()
 	PetJournalPetCardXPBar:CreateBackdrop('Default')	
 	PetJournalPetCardXPBar:SetStatusBarTexture(E.media.normTex)
+
+	-----------------------------
+	--[[ toy box (tab 3) ]]--
+	-----------------------------
+
+	if ToyBox then
+		ToyBox:StripTextures()
+		ToyBox.iconsFrame:StripTextures()
+		
+		-- Поисковая строка
+		if ToyBox.searchBox then
+			S:HandleEditBox(ToyBox.searchBox)
+		end
+		
+		-- Кнопка фильтра
+		if ToyBox.FilterButton then
+			ToyBox.FilterButton:StripTextures(true)
+			S:HandleButton(ToyBox.FilterButton)
+		end
+		
+		-- Прокрутка
+		if ToyBox.iconsFrame.scrollBar then
+			S:HandleScrollBar(ToyBox.iconsFrame.scrollBar)
+		end
+		
+		-- Кнопки навигации
+		if ToyBox.PagingFrame then
+			ToyBox.PagingFrame:StripTextures()
+			if ToyBox.PagingFrame.PrevPageButton then
+				S:HandleNextPrevButton(ToyBox.PagingFrame.PrevPageButton)
+				SquareButton_SetIcon(ToyBox.PagingFrame.PrevPageButton, 'LEFT')
+			end
+			if ToyBox.PagingFrame.NextPageButton then
+				S:HandleNextPrevButton(ToyBox.PagingFrame.NextPageButton)
+				SquareButton_SetIcon(ToyBox.PagingFrame.NextPageButton, 'RIGHT')
+			end
+		end
+		
+		-- Кнопки игрушек
+		if ToyBox.iconsFrame.buttons then
+			for i = 1, #ToyBox.iconsFrame.buttons do
+				local button = ToyBox.iconsFrame.buttons[i]
+				if button then
+					S:HandleItemButton(button)
+					if button.iconTexture then
+						button.iconTexture:SetInside(button.backdrop)
+					end
+				end
+			end
+		end
+		
+		-- Прогресс бар
+		if ToyBox.progressBar then
+			ToyBox.progressBar:StripTextures()
+			ToyBox.progressBar:CreateBackdrop('Default')
+			ToyBox.progressBar:SetStatusBarTexture(E.media.normTex)
+		end
+	end
+
+	-----------------------------
+	--[[ heirlooms journal (tab 4) ]]--
+	-----------------------------
+
+	if HeirloomsJournal then
+		HeirloomsJournal:StripTextures()
+		
+		-- Поисковая строка
+		if HeirloomsJournal.SearchBox then
+			S:HandleEditBox(HeirloomsJournal.SearchBox)
+		end
+		
+		-- Кнопка фильтра
+		if HeirloomsJournal.FilterButton then
+			HeirloomsJournal.FilterButton:StripTextures(true)
+			S:HandleButton(HeirloomsJournal.FilterButton)
+		end
+		
+		-- Прокрутка
+		if HeirloomsJournal.iconsFrame then
+			HeirloomsJournal.iconsFrame:StripTextures()
+			if HeirloomsJournal.iconsFrame.scrollBar then
+				S:HandleScrollBar(HeirloomsJournal.iconsFrame.scrollBar)
+			end
+		end
+		
+		-- Кнопки навигации
+		if HeirloomsJournal.PagingFrame then
+			HeirloomsJournal.PagingFrame:StripTextures()
+			if HeirloomsJournal.PagingFrame.PrevPageButton then
+				S:HandleNextPrevButton(HeirloomsJournal.PagingFrame.PrevPageButton)
+				SquareButton_SetIcon(HeirloomsJournal.PagingFrame.PrevPageButton, 'LEFT')
+			end
+			if HeirloomsJournal.PagingFrame.NextPageButton then
+				S:HandleNextPrevButton(HeirloomsJournal.PagingFrame.NextPageButton)
+				SquareButton_SetIcon(HeirloomsJournal.PagingFrame.NextPageButton, 'RIGHT')
+			end
+		end
+		
+		-- Кнопки реликвий
+		if HeirloomsJournal.iconsFrame then
+			-- Кнопки реликвий
+			if HeirloomsJournal.iconsFrame.buttons then
+				for i = 1, #HeirloomsJournal.iconsFrame.buttons do
+					local button = HeirloomsJournal.iconsFrame.buttons[i]
+					if button then
+						S:HandleItemButton(button)
+						if button.iconTexture then
+							button.iconTexture:SetInside(button.backdrop)
+						end
+					end
+				end
+			end
+		end
+		
+		-- Прогресс бар
+		if HeirloomsJournal.progressBar then
+			HeirloomsJournal.progressBar:StripTextures()
+			HeirloomsJournal.progressBar:CreateBackdrop('Default')
+			HeirloomsJournal.progressBar:SetStatusBarTexture(E.media.normTex)
+		end
+	end
+
+	-----------------------------
+	--[[ wardrobe collection (tab 5) ]]--
+	-----------------------------
+
+	if WardrobeCollectionFrame then
+		WardrobeCollectionFrame:StripTextures()
+		
+		-- Функция для избирательного удаления фоновых текстур
+		local function StripBackgroundTextures(frame, skipButtons)
+			if not frame then return end
+			
+			local frameName = frame:GetName() or ""
+			
+			-- Пропускаем кнопки навигации
+			if skipButtons and (string.find(frameName, "Button") or frame:GetObjectType() == "Button") then
+				return
+			end
+			
+			-- Убираем только фоновые текстуры, не трогая иконки
+			for i = 1, frame:GetNumRegions() do
+				local region = select(i, frame:GetRegions())
+				if region and region:GetObjectType() == "Texture" then
+					local texturePath = region:GetTexture()
+					local drawLayer = region:GetDrawLayer()
+					
+					-- Убираем только фоновые текстуры (BACKGROUND, BORDER)
+					-- Не трогаем ARTWORK и OVERLAY (там иконки)
+					if drawLayer == "BACKGROUND" or drawLayer == "BORDER" then
+						if texturePath and (
+							string.find(texturePath, "Background") or 
+							string.find(texturePath, "Parchment") or
+							string.find(texturePath, "Marble") or
+							string.find(texturePath, "UI-Frame") or
+							not string.find(texturePath, "Icon")
+						) then
+							region:SetTexture(nil)
+							region:SetAlpha(0)
+						end
+					end
+				end
+			end
+			
+			-- Обрабатываем дочерние фреймы
+			local children = {frame:GetChildren()}
+			for _, child in pairs(children) do
+				if child and child.GetObjectType then
+					local childType = child:GetObjectType()
+					local childName = child:GetName() or ""
+					
+					-- Не обрабатываем модели и кнопки навигации
+					if childType ~= "PlayerModel" and childType ~= "DressUpModel" then
+						-- Пропускаем кнопки навигации (PrevPageButton, NextPageButton)
+						if not (string.find(childName, "PageButton") or string.find(childName, "PagingFrame")) then
+							StripBackgroundTextures(child, true)
+						end
+					end
+				end
+			end
+		end
+		
+		-- Применяем избирательную очистку
+		StripBackgroundTextures(WardrobeCollectionFrame, false)
+		
+		-- Поисковая строка
+		if WardrobeCollectionFrame.SearchBox then
+			S:HandleEditBox(WardrobeCollectionFrame.SearchBox)
+		end
+		
+		-- Кнопка фильтра
+		if WardrobeCollectionFrame.FilterButton then
+			WardrobeCollectionFrame.FilterButton:StripTextures(true)
+			S:HandleButton(WardrobeCollectionFrame.FilterButton)
+		end
+		
+		-- Модель персонажа справа
+		if WardrobeCollectionFrame.ModelFrame then
+			WardrobeCollectionFrame.ModelFrame:StripTextures()
+		end
+		
+		-- Панель с предметами (Items tab)
+		if WardrobeCollectionFrame.ItemsCollectionFrame then
+			WardrobeCollectionFrame.ItemsCollectionFrame:StripTextures()
+			
+			-- Навигация по страницам
+			if WardrobeCollectionFrame.ItemsCollectionFrame.PagingFrame then
+				local paging = WardrobeCollectionFrame.ItemsCollectionFrame.PagingFrame
+				paging:StripTextures()
+				
+				if paging.PrevPageButton then
+					S:HandleNextPrevButton(paging.PrevPageButton)
+					SquareButton_SetIcon(paging.PrevPageButton, 'LEFT')
+				end
+				if paging.NextPageButton then
+					S:HandleNextPrevButton(paging.NextPageButton)
+					SquareButton_SetIcon(paging.NextPageButton, 'RIGHT')
+				end
+			end
+			
+			-- Кнопки предметов трансмогрификации
+			if WardrobeCollectionFrame.ItemsCollectionFrame.Models then
+				for i = 1, #WardrobeCollectionFrame.ItemsCollectionFrame.Models do
+					local model = WardrobeCollectionFrame.ItemsCollectionFrame.Models[i]
+					if model then
+						model:StripTextures()
+						model:CreateBackdrop('Default')
+						model.backdrop:SetAllPoints()
+					end
+				end
+			end
+			
+			-- Прокрутка списка
+			if WardrobeCollectionFrame.ItemsCollectionFrame.SlotsFrame then
+				WardrobeCollectionFrame.ItemsCollectionFrame.SlotsFrame:StripTextures()
+			end
+		end
+		
+		-- Панель с наборами (Sets tab)
+		if WardrobeCollectionFrame.SetsCollectionFrame then
+			WardrobeCollectionFrame.SetsCollectionFrame:StripTextures()
+			
+			-- Левая панель со списком наборов
+			if WardrobeCollectionFrame.SetsCollectionFrame.LeftInset then
+				WardrobeCollectionFrame.SetsCollectionFrame.LeftInset:StripTextures()
+			end
+			
+			-- Правая панель с деталями
+			if WardrobeCollectionFrame.SetsCollectionFrame.RightInset then
+				WardrobeCollectionFrame.SetsCollectionFrame.RightInset:StripTextures()
+			end
+			
+			-- Прокрутка наборов
+			if WardrobeCollectionFrame.SetsCollectionFrame.ListContainer then
+				WardrobeCollectionFrame.SetsCollectionFrame.ListContainer:StripTextures()
+				
+				if WardrobeCollectionFrame.SetsCollectionFrame.ListContainer.scrollBar then
+					S:HandleScrollBar(WardrobeCollectionFrame.SetsCollectionFrame.ListContainer.scrollBar)
+				end
+			end
+			
+			-- Детали набора справа
+			if WardrobeCollectionFrame.SetsCollectionFrame.DetailsFrame then
+				WardrobeCollectionFrame.SetsCollectionFrame.DetailsFrame:StripTextures()
+				
+				-- Модель набора
+				if WardrobeCollectionFrame.SetsCollectionFrame.DetailsFrame.ModelFadeTexture then
+					WardrobeCollectionFrame.SetsCollectionFrame.DetailsFrame.ModelFadeTexture:Hide()
+				end
+				
+				-- Иконки предметов набора
+				for i = 1, 10 do
+					local slot = WardrobeCollectionFrame.SetsCollectionFrame.DetailsFrame["slot"..i]
+					if slot then
+						slot:StripTextures()
+						slot:StyleButton(false)
+						slot:CreateBackdrop('Default')
+						slot.backdrop:SetAllPoints()
+						
+						if slot.Icon then
+							slot.Icon:SetTexCoord(unpack(E.TexCoords))
+							slot.Icon:SetInside(slot.backdrop)
+						end
+					end
+				end
+			end
+		end
+		
+		-- Панель с воплощениями (Incarnations tab)
+		-- Попробуем несколько вариантов названий фреймов
+		local incarnationFrames = {
+			WardrobeCollectionFrame.SetsTransmogFrame,
+			_G["WardrobeCollectionFrameSetsTransmogFrame"],
+		}
+		
+		for _, frame in pairs(incarnationFrames) do
+			if frame then
+				frame:StripTextures()
+				
+				-- Кнопки навигации
+				if frame.PagingFrame then
+					local paging = frame.PagingFrame
+					paging:StripTextures()
+					
+					if paging.PrevPageButton then
+						S:HandleNextPrevButton(paging.PrevPageButton)
+						SquareButton_SetIcon(paging.PrevPageButton, 'LEFT')
+					end
+					if paging.NextPageButton then
+						S:HandleNextPrevButton(paging.NextPageButton)
+						SquareButton_SetIcon(paging.NextPageButton, 'RIGHT')
+					end
+				end
+				
+				-- Кнопки воплощений
+				if frame.Models then
+					for i = 1, #frame.Models do
+						local model = frame.Models[i]
+						if model then
+							model:StripTextures()
+							model:CreateBackdrop('Default')
+							model.backdrop:SetAllPoints()
+						end
+					end
+				end
+				
+				break
+			end
+		end
+		
+		-- Прогресс бар
+		if WardrobeCollectionFrame.progressBar then
+			WardrobeCollectionFrame.progressBar:StripTextures()
+			WardrobeCollectionFrame.progressBar:CreateBackdrop('Default')
+			WardrobeCollectionFrame.progressBar:SetStatusBarTexture(E.media.normTex)
+		end
+		
+		-- Функция обновления всех вкладок
+		local function UpdateAllTabBorders()
+			for i = 1, 3 do
+				local tab = _G["WardrobeCollectionFrameTab"..i]
+				if tab and tab.backdrop then
+					local isSelected = PanelTemplates_GetSelectedTab(WardrobeCollectionFrame) == tab:GetID()
+					if isSelected then
+						tab.backdrop:SetBackdropBorderColor(1, 0.82, 0)
+					else
+						tab.backdrop:SetBackdropBorderColor(unpack(E.media.bordercolor))
+					end
+				end
+			end
+		end
+		
+		-- Вкладки внутри Wardrobe (Items/Sets/Incarnations)
+		for i = 1, 3 do
+			local tab = _G["WardrobeCollectionFrameTab"..i]
+			if tab and not tab.elvuiStyled then
+				-- Убираем стандартные текстуры
+				tab:StripTextures()
+				
+				-- Создаём фон
+				tab:CreateBackdrop('Default')
+				tab.backdrop:SetAllPoints()
+				
+				-- Стилизуем как кнопку
+				tab:StyleButton(true)
+				
+				-- Настраиваем текст
+				if tab.Text then
+					tab.Text:ClearAllPoints()
+					tab.Text:SetPoint('CENTER', tab, 'CENTER', 0, 0)
+					tab.Text:SetJustifyH('CENTER')
+				end
+				
+				-- Добавляем эффект при наведении
+				tab:HookScript('OnEnter', function(self)
+					if not self.backdrop then return end
+					-- Только если вкладка не выбрана, подсвечиваем при наведении
+					local isSelected = PanelTemplates_GetSelectedTab(WardrobeCollectionFrame) == self:GetID()
+					if not isSelected then
+						self.backdrop:SetBackdropBorderColor(1, 0.82, 0)
+					end
+				end)
+				
+				tab:HookScript('OnLeave', function(self)
+					UpdateAllTabBorders()
+				end)
+				
+				-- Обновляем все вкладки при клике
+				tab:HookScript('OnClick', function(self)
+					E:Delay(0.05, UpdateAllTabBorders)
+				end)
+				
+				-- Обновляем при показе
+				tab:HookScript('OnShow', UpdateAllTabBorders)
+				
+				tab.elvuiStyled = true
+			end
+		end
+		
+		-- Первоначальное обновление
+		UpdateAllTabBorders()
+	end
+
+	-----------------------------
+	--[[ Wardrobe Frame (окно трансмогрификации у NPC) ]]--
+	-----------------------------
+
+	if WardrobeFrame then
+		-- Убираем ВСЕ текстуры
+		WardrobeFrame:StripTextures(true)
+		
+		-- Создаём чёрный полупрозрачный фон ElvUI
+		WardrobeFrame:CreateBackdrop("Transparent")
+		WardrobeFrame.backdrop:SetAllPoints()
+		
+		-- Скрываем портрет/иконку
+		if WardrobeFramePortrait then
+			WardrobeFramePortrait:SetAlpha(0)
+			WardrobeFramePortrait:Hide()
+		end
+		
+		-- Кнопка закрытия
+		if WardrobeFrameCloseButton then
+			S:HandleCloseButton(WardrobeFrameCloseButton)
+		end
+		
+		-- Левая панель (трансмог)
+		if WardrobeTransmogFrame then
+			WardrobeTransmogFrame:StripTextures(true)
+			
+			if WardrobeTransmogFrame.ModelFrame then
+				WardrobeTransmogFrame.ModelFrame:StripTextures()
+			end
+		end
+		
+		-- Правая панель (коллекция предметов)
+		if WardrobeCollectionFrame then
+			WardrobeCollectionFrame:StripTextures(true)
+		end
+	end
 end
 
 S:RegisterSkin("Blizzard_Collections", LoadSkin)
